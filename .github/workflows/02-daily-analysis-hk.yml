@@ -1,9 +1,10 @@
-name: 每日股票分析
+name: 每日股票分析-港股
 
 on:
-  # 定时触发 - 每天北京时间 18:00 (UTC 10:00)
+  # 定时触发 - 港股盘前 30 分钟报告必须到：CST 07:30 (UTC 23:30 前一天)
+  # 理由：09:30 开盘前 30 分钟报告到 (08:00 报告到，留 30 分钟跑 + 1h 缓冲)
   schedule:
-    - cron: '0 10 * * *'     # 周一到周五，UTC 10:00 = 北京时间 18:00
+    - cron: '30 23 * * 0-4'    # UTC 周日-周四 23:30 = CST 周一-周五 07:30
   
   # 手动触发
   workflow_dispatch:
@@ -349,8 +350,8 @@ jobs:
           # ==========================================
           # 自选股配置
           # ==========================================
-          STOCK_LIST: ${{ vars.STOCK_LIST || secrets.STOCK_LIST || '600519' }}
-          MARKET_REVIEW_REGION: ${{ vars.MARKET_REVIEW_REGION || secrets.MARKET_REVIEW_REGION || 'cn' }}
+          STOCK_LIST: ${{ vars.STOCK_LIST_HK || vars.STOCK_LIST || secrets.STOCK_LIST_HK || secrets.STOCK_LIST || 'hk00700' }}
+          MARKET_REVIEW_REGION: 'hk'   # 港股大盘复盘
           MARKET_REVIEW_COLOR_SCHEME: ${{ vars.MARKET_REVIEW_COLOR_SCHEME || secrets.MARKET_REVIEW_COLOR_SCHEME || 'green_up' }}
           
           # ==========================================

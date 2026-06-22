@@ -16,19 +16,46 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync upstream changes
+      - name: Sync upstream changes (preserve fork-specific workflows)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           git remote add upstream https://github.com/ZhuLinsen/daily_stock_analysis.git
           git fetch upstream
-          
+
           # 检查是否有新提交
           if [ "$(git rev-parse HEAD)" != "$(git rev-parse upstream/main)" ]; then
+            # 备份 fork 自己的 workflow（除 sync-upstream.yml 自身外）
+            # 目的：源库合并进来会带 .github/workflows/ 里的文件（包括 00-daily-analysis.yml）
+            # merge 后再恢复 fork 的版本，避免源库改动覆盖 fork 的市场分割 workflow
+            mkdir -p /tmp/fork-workflows-backup
+            for f in .github/workflows/*.yml; do
+              [ "$(basename "$f")" = "sync-upstream.yml" ] && continue
+              [ -f "$f" ] && cp "$f" /tmp/fork-workflows-backup/
+            done
+
+            # merge upstream（源库的 .github/workflows/ 内容会进来）
             git merge upstream/main --no-edit
+
+            # 恢复 fork 自己的 workflow
+            if [ -d /tmp/fork-workflows-backup ]; then
+              cp -rf /tmp/fork-workflows-backup/*.yml .github/workflows/ 2>/dev/null || true
+              rm -rf /tmp/fork-workflows-backup
+            fi
+
+            # 显式删除源库的 00-daily-analysis.yml（被 fork 的 3 个市场 workflow 替代）
+            # 否则源库每次 sync 都会把它带回来，触发重复 schedule
+            rm -f .github/workflows/00-daily-analysis.yml
+
+            # 如果有 fork workflow 恢复导致的新改动，commit
+            if ! git diff --quiet; then
+              git add .github/workflows/
+              git commit -m "chore: preserve fork-specific workflows during upstream sync" || echo "nothing to commit"
+            fi
+
             git push origin main
-            echo "✅ Synced with upstream"
+            echo "✅ Synced with upstream (fork workflows preserved)"
           else
             echo "✅ Already up to date"
           fi
