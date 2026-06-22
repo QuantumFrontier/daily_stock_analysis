@@ -24,9 +24,9 @@ on:
         default: false
         type: boolean
 
-# 并发控制：同一时间只运行一个分析任务
+# 并发控制：每个市场独立 group，不互相阻塞
 concurrency:
-  group: stock-analysis
+  group: stock-analysis-cn
   cancel-in-progress: false
 
 jobs:
